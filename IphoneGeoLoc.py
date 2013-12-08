@@ -234,7 +234,11 @@ def sqlCrowle(fileName, dbName):
     wlistStr = ' '.join(wlist)
     con = sqlite3.connect(fileName)
     cursor = con.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    try:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    except Exception, e:
+            print e
+            return None, None
     tables = cursor.fetchall()
     db_results= []
     IP_db_results = []
@@ -246,7 +250,11 @@ def sqlCrowle(fileName, dbName):
         lat_name = ''
         long_name = ''
         date_name = ''
-        cursor.execute("SELECT * FROM "+ str(table))
+        try:
+            cursor.execute("SELECT * FROM "+ str(table))
+        except Exception, e:
+            print e
+            return None, None
         culum_names = list(map(lambda x: x[0], cursor.description))
         #print culum_names
         IP_culums =[]
@@ -442,7 +450,8 @@ def fileinfo_str(f, verbose=False):
     elif (f['mode'] & 0xE000) == 0x8000: type = '-' # file
     elif (f['mode'] & 0xE000) == 0x4000: type = 'd' # dir
     else: 
-        print >> sys.stderr, "Unknown file type %04x for %s" % (f['mode'], fileinfo_str(f, False))
+        if(MORE):
+            print >> sys.stderr, "Unknown file type %04x for %s" % (f['mode'], fileinfo_str(f, False))
         type = '?' # unknown
     info = ("%s%s %08x %08x %7d %10d %10d %10d (%s)%s::%s" % 
             (type, modestr(f['mode']&0x0FFF) , f['userid'], f['groupid'], f['filelen'], 
@@ -467,7 +476,8 @@ def manifestParse(dirName=""):
             fileinfo['fileID'] = mbdx[offset]
         else:
             fileinfo['fileID'] = "<nofileID>"
-            print >> sys.stderr, "No fileID found for %s" % fileinfo_str(fileinfo)
+            if(MORE):
+                print >> sys.stderr, "No fileID found for %s" % fileinfo_str(fileinfo)
         #print fileinfo_str(fileinfo, verbose)
         fily.write(fileinfo_str(fileinfo, verbose))
         fily.write("\n")
@@ -483,8 +493,10 @@ def manifestParse(dirName=""):
 
 
 def setup(argv):
+    Manifest_mbdb = 1
+    json = 1
     hash_dic_name = 'hash_dic.json'
-
+    #a = []
     if len(argv) > 1:
         dir_name = argv[1]
     else:
@@ -501,38 +513,46 @@ def setup(argv):
         json = 0
     try:
         print "Processing Manifest.mbdb ..."
-        mbdx, hash_dic = manifestParse.manifestParse(dir_name + '/')
-    except:
+        print dir_name
+        mbdx, hash_dic = manifestParse(dir_name + '/')
+    except Exception, e:
+        #a =e
         print "Couldn't process Manifest.mbdb"
         Manifest_mbdb = 0 
         #do import of dictionary from json file
     if(not(Manifest_mbdb + json)):
+        #print a
         print "Couldn't craete Hash dictionary, exiting"
+        
         exit()
-
+    return dir_name 
 
 
 
 def main(argv):
+    dir_name = setup(argv)    
     ImgaDatas = []
     types = []
     counter = 0
     percent = 0
     print "Sorting",
-    try:
-        typ = subprocess.check_output(["mkdir",output_dir])
-        typ = subprocess.check_output(["mkdir",output_dir +'/' + GEO_IP_folder[:-1]])
-        typ = subprocess.check_output(["mkdir",output_dir +'/' + GEO_found_folder[:-1]])
+    # try:
+    #     typ = subprocess.check_output(["mkdir",output_dir])
+    #     typ = subprocess.check_output(["mkdir",output_dir +'/' + GEO_IP_folder[:-1]])
+    #     typ = subprocess.check_output(["mkdir",output_dir +'/' + GEO_found_folder[:-1]])
 
-    except Exception, e:
-        print e
-        exit()
-
+    # except:
+    #     #print e
+        # pass
+    #print "HAHA"
+    print "dir_name", dir_name
     for dirname, dirnames, filenames in os.walk(dir_name):
         nFiles = len(filenames)
-        if(not(counter)):
-            print  nFiles, "files",
+        print "nFiles:", nFiles
+        # if(not(counter)):
+        #     print  nFiles, "files",
         for fn in filenames:
+            #print "File:", fn
             counter += 1
 
             ffn = dirname  + '/' + fn
@@ -540,47 +560,48 @@ def main(argv):
                 typ = subprocess.check_output(["file",ffn])
             except Exception, e:
                 print e
-                exit()
-                typ = typ.split(":")[1]
-                typ1 = typ.split()[0]
-                typ = typ1 + "_folder"
-                file_type = typ1.lower()
-                if (fn in hash_dic ):
-                        new_fn = hash_dic[fn].split('/')[-1]
-                    else:
-                        new_fn = fn
+                
+            typ = typ.split(":")[1]
+            typ1 = typ.split()[0]
+            typ = typ1 + "_folder"
+            file_type = typ1.lower()
+            if (fn in hash_dic ):
+                new_fn = hash_dic[fn].split('/')[-1]
+            else:
+                new_fn = fn
 
-                if file_type == "sqlite":
-                    geolist, iplist = sqlCrowle(ffn, new_fn)
-                    if(geolist):
-                        SQL_KML(geolist)
-                    if(iplist):
-                        SQL_IP_KML(iplist)
-                if file_type == "jpeg" :
-                    point = imageData(ffn)
-                    if(point != None):
-                        ImgaDatas += [ point + [new_fn]]
-                if (SORT):
-                    if (not( typ in types)):
-                        types +=[typ]
-                        try:
-                             message = subprocess.check_output(["mkdir", dirname+ '/'  +typ])
-                        except:
-                            pass
+            if file_type == "sqlite":
+                geolist, iplist = sqlCrowle(ffn, new_fn)
+                if(geolist):
+                    SQL_KML(geolist)
+                if(iplist):
+                    SQL_IP_KML(iplist)
+            if file_type == "jpeg" :
+                point = imageData(ffn)
+                if(point != None):
+                    ImgaDatas += [ point + [new_fn]]
+            if (SORT):
+                if (not( typ in types)):
+                    types +=[typ]
                     try:
-                        
-                        subprocess.check_output(["cp",ffn, dirname + '/' + typ + '/' + new_fn])
-                        subprocess.check_output(["rm", ffn  ])
-                    except Exception, e:
-                        print e
-                        exit()
+                         message = subprocess.check_output(["mkdir", dirname+ '/'  +typ])
+                    except:
+                        pass
+                try:
+                    
+                    subprocess.check_output(["cp",ffn, dirname + '/' + typ + '/' + new_fn])
+                    subprocess.check_output(["rm", ffn  ])
+                except Exception, e:
+                    print e
+                    exit()
 
             
-            printProgress(nFiles,counter,percent)
+            #printProgress(nFiles,counter,percent)
         IMG_KML([save_KML_IMG_as, ImgaDatas]) 
 
             
 
     print "[Done]"
 
-#if __name__ == '__main__':
+if __name__ == '__main__':
+    main(sys.argv)
