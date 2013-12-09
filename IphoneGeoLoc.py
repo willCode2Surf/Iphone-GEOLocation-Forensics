@@ -1,3 +1,4 @@
+"Coded by Alexander Ryzhko"
 import os
 import time
 import datetime
@@ -6,7 +7,7 @@ import sys
 import subprocess
 import types
 import hashlib
-import json
+import json 
 
 try:
     import pygeoip
@@ -26,11 +27,13 @@ dir_name = ''
 output_dir = 'IphoneGeolocOutput'
 SAVE_JSON = ''
 
+GEO_hit_files_folder = "Files_with_GEOlocations"
 GEO_IP_folder = "GEO_from_IP/"
 GEO_found_folder = "GEO_from_SQLs/"
-save_KML_IMG_as = "Geolocation_from_JPEG_IMGs.kml"
+save_KML_IMG_as = "Geolocation_from_JPEG_IMGs"
 save_big_KML_as = "GeolocationsFound"
 
+HIT = False
 IP = True
 wlocList = ["LATITUDE", "LONGITUDE"]
 wdateList = ["TIMESTAMP", "DATE"]
@@ -46,12 +49,12 @@ SORT_TYPE = False
 SORT_ORIGINAL = False
 RENAME = False
 
+
 hash_dic = {}
 mbdx = {}
-IpDBs = [] 
-SQlDbs = []
-json = 1
-Manifest_mbdb = 1
+
+#json = 1
+#Manifest_mbdb = 1
 
 
 '''
@@ -60,29 +63,34 @@ Check for images only for CamerasPhotoes???
 
 def makeOutputDir(out = output_dir):
     try:
-
+        if(MORE):
+            print "Creating Output Directories"
         message = subprocess.check_output(["mkdir", out])
         message = subprocess.check_output(["mkdir", out + '/'  + GEO_found_folder ])
         message = subprocess.check_output(["mkdir", out + '/'  + GEO_IP_folder  ])
+        if(HIT):
+            message = subprocess.check_output(["mkdir", out + '/'  + GEO_hit_files_folder ])
     except Exception, e:
-        print e
-        print
-        print "dd"
-        exit()
+        pass
 def kmlAll(imglist, Ips, SQls):
 
     if(MORE):
         print "Creating BIG KML"
     kml = simplekml.Kml()
+
+    #IMAGES    
+    #print "imglist[0]", imglist[0]
     for point in imglist[-1]:
+        #print "name=", point, "description=", point, "coords=", [(point, point)] 
         kml.newpoint(name=point[2], description=point[-1], coords=[(point[1], point[0])] )
-    
+
+    #IPS
     for dataBaseIPList in Ips:
         save_to = output_dir + '/' + GEO_IP_folder
         db_name = dataBaseIPList[0]
         save_as = db_name.split('/')[-1] +"_IP_geo" + '.kml'
         save_as = save_to + save_as 
-        kml = simplekml.Kml()
+        
 
         for table in dataBaseIPList[1]:
             table_name = table[0]
@@ -112,12 +120,13 @@ def kmlAll(imglist, Ips, SQls):
 
 
                     kml.newpoint(name=point_name , description=discr, coords=[(point[1]['longitude'], point[1]['latitude'])] )
+    #GEOLOCATIONS
     for dataBaseList in SQls:
         save_to = output_dir + '/' + GEO_found_folder
         db_name = dataBaseList[0]
         if(MORE):
             print "Crating SQL Location KML:", db_name.split('/')[-1]
-        kml = simplekml.Kml()
+        
         for table in dataBaseList[1]:
             table_name = table[0]
             for point in table[1]:
@@ -145,9 +154,9 @@ def kmlAll(imglist, Ips, SQls):
         save_as = save_to + save_as         
 
     if(KMZ):
-        kml.savekmz(output_dir + '/' + save_big_KML_as + '.kmz')
+        kml.savekmz(output_dir + '/' + save_big_KML_as + '.kmz', format=False)
     else:
-        kml.save(output_dir + '/' + save_big_KML_as + '.kml')
+        kml.save(output_dir + '/' + save_big_KML_as  + '.kml')
 
 
 def IP_info_By_IP(given_IP):
@@ -250,17 +259,18 @@ def IMG_KML(imglist):
     if(MORE):
         print "Creating IMG KML"
     kml = simplekml.Kml()
+    #print "imglist[0]", imglist[0]
     for point in imglist[-1]:
         kml.newpoint(name=point[2], description=point[-1], coords=[(point[1], point[0])] )
     if(KMZ):
-        kml.savekmz(imglist[0] + '.kml')
+        kml.savekmz(output_dir + '/' + imglist[0] + '.kmz', format=False)
     else:
         kml.save(output_dir + '/' + imglist[0] + '.kml')
 
 def SQL_IP_KML(dataBaseIPList):
     save_to = output_dir + '/' + GEO_IP_folder
     db_name = dataBaseIPList[0]
-    save_as = db_name.split('/')[-1] +"_IP_geo" 
+    save_as = db_name.split()[0].split('/')[-1]  +"_IP_geo" 
     save_as = save_to + save_as 
     kml = simplekml.Kml()
 
@@ -293,7 +303,7 @@ def SQL_IP_KML(dataBaseIPList):
 
                 kml.newpoint(name=point_name , description=discr, coords=[(point[1]['longitude'], point[1]['latitude'])] )
     if(KMZ):
-        kml.savekmz(save_as+ '.kmz')
+        kml.savekmz(save_as+ '.kmz',  format=False)#  + '.kmz')
     else:
         kml.save(save_as + '.kml')
 
@@ -326,12 +336,13 @@ def SQL_KML(dataBaseList):
             if(not(isTS)):
                 point_name =  hashlib.md5(str(point[0][1]) + str (point[1][1])).hexdigest()[:8]   
             kml.newpoint(name=point_name , description=discr, coords=[(point[1][1], point[0][1])] )
-    save_as = db_name.split('/')[-1] 
+    save_as = db_name.split()[0].split('/')[-1] 
+    #print db_name.split()
     save_as = save_to + save_as 
     if(KMZ):
-        kml.savekmz(save_as+ '.kmz')
+        kml.savekmz(save_as + '.kmz', format=False)#  + '.kmz')
     else:
-        kml.save(save_as+ '.kml')
+        kml.save(save_as    + '.kml')
 
 
 def sqlCrowle(fileName, dbName): 
@@ -583,7 +594,7 @@ def manifestParse(dirName=""):
         else:
             fileinfo['fileID'] = "<nofileID>"
             if(MORE):
-                print >> sys.stderr, "No fileID found for %s" % fileinfo_str(fileinfo)
+                print >> sys.stderr, "ERROR:No fileID found for %s" % fileinfo_str(fileinfo)
         #print fileinfo_str(fileinfo, verbose)
         fily.write(fileinfo_str(fileinfo, verbose))
         fily.write("\n")
@@ -608,90 +619,122 @@ def printHelp(argv):
     print "  -z \t             -> save as KMZ instead of KML"
     print "  -a \t             -> save all in one kml/kmz file instead one per a database"
     print "  -m \t             -> print more information downing scipt run"
+    print "  -hit \t           -> save files with GEOlocation info"
     print "  -st \t             -> sort files in folders based on the fie type"
     print "  -so \t             -> parse the files based on original names"
     print "  -rn \t             -> rename files with found original names"
     print "  -o DirName \t     -> specify output directory name (within running directory)"
-    print "  -db dbName \t     -> database for IP geolocation lookup instead of GeoLiteCity.dat"
+    print "  -db dbName \t     -> database for IP geolocation, default = GeoLiteCity.dat"
     print "  -json fileName     -> add hash dictionary to load from a json file"
     print "  -s FileName \t     -> save hash dictionary created from manifest as json"
     print 
     exit()
 def setup(argv):
+    global hash_dic
+    hash_dic = {}
     Manifest_mbdb = 1
-    json = 1
+    jsonf = 1
     hash_dic_name = 'hash_dic.json'
     #main argument
     if len(argv) > 1:
         dir_name = argv[1]
     else:
-        print "No direcoroty given"
+        print "ERROR: No direcoroty given"
         printHelp(argv)
 
     #optional arguments
     if len(argv) > 2:
         argstr = " ".join(argv[2:])
-        argstr = argstr + ' '
-        if(len(argstr.split(" -h "))>1):
+        argstr = ' ' + argstr + ' '
+        #print argv
+        #print "-so" in argv
+        #print argstr.split(" -so ")
+        if("-h" in argv ):
             printHelp(argv)
-        if(len(argstr.split(" -z "))>1):
+        if("-z" in argv):
+            global KMZ
             KMZ = True
-        if(len(argstr.split(" -a "))>1):
+        if("-a" in argv):
+            global BIG_KML
             BIG_KML = True
-        if(len(argstr.split(" -m "))>1):
+        if("-m" in argv):
+            global MORE
             MORE = True
-        if(len(argstr.split(" -st "))>1):
+        if("-hit" in argv):
+            global HIT
+            HIT = True
+        if("-st" in argv):
+            global SORT_TYPE
             SORT_TYPE = True
-        if(len(argstr.split(" -so "))>1):
+            print "Sorting by Type"
+        if("-so" in argv):
+            global SORT_ORIGINAL 
             SORT_ORIGINAL = True
-        if(len(argstr.split(" -rm "))>1):
+            print "Sorting in Original Order"
+        if("-rn" in argv):
+            global RENAME
             RENAME = True
-        if(len(argstr.split(" -o "))>1):
+        if("-o" in argv):
+            global output_dir
             output_dir = argstr.split(" -o ")[1].split()[0]
-        if(len(argstr.split(" -db "))>1):
+        if("-db" in argv):
+            global IPGeoDB
             IPGeoDB = argstr.split(" -db ")[1].split()[0]
-        if(len(argstr.split(" -json "))>1):
+        if("-json" in argv):
             hash_dic_name = argstr.split(" -json ")[1].split()[0]
-        if(len(argstr.split(" -s "))>1):
-            x = argstr.split(" -s ")[-1].split()
+        if("-s" in argv):
+            x = argstr.split(" -s ")[-1].split()[0]
+            global SAVE_JSON
             if(x): 
                 SAVE_JSON = x
             else: 
                 SAVE_JSON = "Hash_dictionary_iphone_Files.json"
     try:
         with open(hash_dic_name) as f:
+            print "Loading", hash_dic_name
             hash_dic = dict(hash_dic.items() + (json.load(f)).items() )
     except:
-        print "Couldn't load hash_dictionary"
-        json = 0
+        if(hash_dic_name != 'hash_dic.json'):
+            print "Couldn't load hash_dictionary"
+        jsonf = 0
     try:
         print "Processing Manifest.mbdb ..."
         print dir_name
         mbdx, hd = manifestParse(dir_name + '/')
-        hash_dic = dict(hash_dic.items() + (hd.items() )
+        hash_dic = dict(hash_dic.items() + (hd.items() ))
     except Exception, e:
         #a =e
         print "Couldn't process Manifest.mbdb"
         Manifest_mbdb = 0 
         #do import of dictionary from json file
-    if(not(Manifest_mbdb + json)):
+    if(not(Manifest_mbdb + jsonf)):
         #print a
-        print "Couldn't craete Hash dictionary, exiting"
+        print "ERROR:Couldn't craete Hash dictionary, DICTIONARY:",
+        print hash_dic 
+        if(raw_input("Please press ENTER to comtinue or enter anything else to quit")):
+            exit()
         
-        printHelp()
     return dir_name 
 
 
 
 def main(argv):
+    IpDBs = [] 
+    SQlDbs = []
+    FOLDERS = []
     dir_name = setup(argv)  
-    gi = pygeoip.GeoIP(IPGeoDB, pygeoip.MEMORY_CACHE)  
+    try:
+        print "Loading", IPGeoDB
+        gi = pygeoip.GeoIP(IPGeoDB, pygeoip.MEMORY_CACHE)  
+    except:
+        print "ERROR: couln't load IP database"
+        IP = False
     ImgaDatas = []
     types = []
     counter = 0
     percent = 0
-    makeOutputDir()
-    print "Sorting",
+    makeOutputDir(output_dir)
+    #print "Sorting",
     # try:
     #     typ = subprocess.check_output(["mkdir",output_dir])
     #     typ = subprocess.check_output(["mkdir",output_dir +'/' + GEO_IP_folder[:-1]])
@@ -701,17 +744,18 @@ def main(argv):
     #     #print e
         # pass
     #print "HAHA"
-    print "Directory Name", dir_name
+    #print "Directory Name", dir_name
     for dirname, dirnames, filenames in os.walk(dir_name):
         nFiles = len(filenames)
         print "Number of Files:", nFiles
         # if(not(counter)):
         #     print  nFiles, "files",
+        #print filenames
         for fn in filenames:
             #print "File:", fn
             counter += 1
             if(counter % 100 == 0):
-                print "Processed:", counter, "out of", nFiles 
+                print "\t\t\t\tProcessed:", str(100*counter/nFiles) + "% (" , counter, "out of", nFiles, ")" 
             ffn = dirname  + '/' + fn
             try:
                 typ = subprocess.check_output(["file",ffn])
@@ -727,7 +771,6 @@ def main(argv):
                 new_fn = hash_dic[fn]#.split('/')[-1]
             else:
                 new_fn = fn
-
             if file_type == "sqlite":
                 geolist, iplist = sqlCrowle(ffn, new_fn)
                 if(geolist):
@@ -736,20 +779,59 @@ def main(argv):
                     else:
                         SQL_KML(geolist)
                     #subprocess.check_output(["cp",ffn, '2iphoneData2/' + fn])
-                    print "found Geo", new_fn
+                    if(MORE):
+                        print "found Geo", new_fn
+                    if(HIT):
+                        try:
+                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + new_fn.split("/")[-1]])
+
+                        except:
+                            pass
                 if(iplist):
                     if(BIG_KML):
-                        IpDBs = [iplist]
+                        IpDBs += [iplist]
                     else: 
                         SQL_IP_KML(iplist)
                     #subprocess.check_output(["cp",ffn, '2iphoneData2/' + fn])
+                    if(MORE):
+                        print "found valid IPs"
+                    if(HIT):
+                        try:
+                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + new_fn.split("/")[-1]])
+                        except:
+                            pass
             if file_type == "jpeg" :
                 point = imageData(ffn)
                 if(point != None):
                    # subprocess.check_output(["cp",ffn, '2iphoneData2/' + fn])
                     #print [ point + [new_fn]]
                     ImgaDatas += [ point + [new_fn + '\n' + ffn]]
-            if (SORT):
+                    if(HIT):
+                        try:
+                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + new_fn.split("/")[-1]])
+                        except:
+                            pass
+
+            #print "SORT_ORIGINAL", SORT_ORIGINAL
+            if(SORT_ORIGINAL):
+                #print "try"
+                folderString = dirname 
+                for folder in new_fn.split('/')[:-1]:
+                    folderString = folderString + '/' +  folder
+                    if(not( folderString in FOLDERS)):
+                        try:
+                         message = subprocess.check_output(["mkdir", folderString ])
+                         FOLDERS+=[folderString]
+                        except:
+                          pass
+                try:
+                    subprocess.check_output(["mv",ffn, dirname + '/' +  new_fn])
+                    #subprocess.check_output(["rm", ffn  ])
+                except Exception, e:
+                    if(MORE):
+                        print e
+                    
+            elif(SORT_TYPE):
                 if (not( typ in types)):
                     types +=[typ]
                     try:
@@ -758,21 +840,29 @@ def main(argv):
                         pass
                 try:
                     
-                    subprocess.check_output(["cp",ffn, dirname + '/' + typ + '/' + new_fn])
-                    subprocess.check_output(["rm", ffn  ])
+                    subprocess.check_output(["mv",ffn, dirname + '/' + typ + '/' + new_fn.split('/')[-1]])
+                    #subprocess.check_output(["rm", ffn  ])
                 except Exception, e:
-                    print e
-                    exit()
+                    if(MORE):
+                        print e
+                    
 
-            
+            elif(RENAME):
+                #print "REEEEEEEEEEEEEEEEEEEEEENNNNNNNNNNNNNNNNNNNNNAAAAAAAAAAAME!"
+                try:
+                    subprocess.check_output(["mv",ffn, dirname + '/' +  new_fn.split('/')[-1] ])
+                except Exception, e:
+                    if(MORE):
+                        print e
             #printProgress(nFiles,counter,percent)
         IMG_KML([save_KML_IMG_as, ImgaDatas]) 
     if(BIG_KML):
         print "Saving KML/KMZ"
-        kmlAll(ImgaDatas, IpDBs, SQlDbs)
+        kmlAll([save_KML_IMG_as, ImgaDatas], IpDBs, SQlDbs)
 
-
-            
+    if(SAVE_JSON):
+        with open(output_dir + '/'+ SAVE_JSON, 'wb') as fp:
+            json.dump(hash_dic, fp)
 
     print "[Done]"
 
