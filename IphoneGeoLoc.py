@@ -361,7 +361,8 @@ def sqlCrowle(fileName, dbName):
     try:
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
     except Exception, e:
-            print e
+            if(MORE):
+                print e
             return None, None
     tables = cursor.fetchall()
     db_results= []
@@ -377,7 +378,8 @@ def sqlCrowle(fileName, dbName):
         try:
             cursor.execute("SELECT * FROM "+ str(table))
         except Exception, e:
-            print e
+            if(MORE):
+                print e
             return None, None
         culum_names = list(map(lambda x: x[0], cursor.description))
         #print culum_names
@@ -431,14 +433,9 @@ def sqlCrowle(fileName, dbName):
                 for i in range(len(row)):
                     if(row[i]):
                         current_culum = all_culums[i]
-                        #print "current_culum", current_culum
                         if(current_culum in IP_culums):
-                            #print "IP ADRESS?", row[i]
-                            #print "IP detected:", row[i]
                             IP_info = IP_info_By_IP(row[i])
-                            #print "IP_info:", IP_info
                             if(IP_info):
-                                #print "Valid IP", row[i]
                                 IP_info["ip"] = row[i]
                                 add_IP_row += [[current_culum, IP_info]]
                         if(current_culum in list_valid_culums):
@@ -594,7 +591,7 @@ def manifestParse(dirName=""):
     mbdx = {}
     hash_dic = {}
     mbdb = process_mbdb_file(dirName + "Manifest.mbdb")
-    fily = open("Manifest.mbdb_Report.txt", 'w')
+    fily = open(output_dir + "/Manifest.mbdb_Report.txt", 'w')
     sizes = {}
     for offset, fileinfo in mbdb.items():
         if offset in mbdx:
@@ -644,6 +641,8 @@ def setup(argv):
     jsonf = 1
     hash_dic_name = 'hash_dic.json'
     #main argument
+    if("-h" in argv ):
+            printHelp(argv)
     if len(argv) > 1:
         dir_name = argv[1]
     else:
@@ -654,11 +653,6 @@ def setup(argv):
     if len(argv) > 2:
         argstr = " ".join(argv[2:])
         argstr = ' ' + argstr + ' '
-        #print argv
-        #print "-so" in argv
-        #print argstr.split(" -so ")
-        if("-h" in argv ):
-            printHelp(argv)
         if("-z" in argv):
             global KMZ
             KMZ = True
@@ -719,6 +713,7 @@ def setup(argv):
                 SAVE_JSON = x[0]
             else: 
                 SAVE_JSON = "Hash_dictionary_iphone_Files.json"
+    makeOutputDir(output_dir)
     try:
         with open(hash_dic_name) as f:
             print "Loading", hash_dic_name
@@ -729,7 +724,7 @@ def setup(argv):
         jsonf = 0
     try:
         print "Processing Manifest.mbdb ..."
-        print dir_name
+        #print dir_name
         mbdx, hd = manifestParse(dir_name + '/')
         hash_dic = dict(hash_dic.items() + (hd.items() ))
     except Exception, e:
@@ -740,7 +735,7 @@ def setup(argv):
     if(not(Manifest_mbdb + jsonf)):
         #print a
         print "ERROR:Couldn't craete Hash dictionary, DICTIONARY:",
-        print hash_dic 
+        #print hash_dic 
         if(raw_input("Please press ENTER to comtinue or enter anything else to quit")):
             exit()
         
@@ -762,7 +757,6 @@ def main(argv):
     types = []
     counter = 0
     percent = 0
-    makeOutputDir(output_dir)
     #print "Sorting",
     # try:
     #     typ = subprocess.check_output(["mkdir",output_dir])
@@ -812,7 +806,7 @@ def main(argv):
                         print "found Geo", new_fn
                     if(HIT):
                         try:
-                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + new_fn.split("/")[-1]])
+                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + ffn.split("/")[-1]])
                         except:
                             pass
                 if(iplist):
@@ -825,7 +819,7 @@ def main(argv):
                         print "found valid IPs"
                     if(HIT):
                         try:
-                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + new_fn.split("/")[-1]])
+                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + ffn.split("/")[-1]])
                         except:
                             pass
             if file_type == "jpeg" :
@@ -836,7 +830,7 @@ def main(argv):
                     ImgaDatas += [ point + [new_fn + '\n' + ffn]]
                     if(HIT):
                         try:
-                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + new_fn.split("/")[-1]])
+                            message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + ffn.split("/")[-1]])
                         except:
                             pass
             #print "SORT_ORIGINAL", SORT_ORIGINAL
@@ -878,10 +872,11 @@ def main(argv):
                     if(MORE):
                         print e
             #printProgress(nFiles,counter,percent)
-        IMG_KML([save_KML_IMG_as, ImgaDatas]) 
     if(BIG_KML):
         print "Saving KML/KMZ"
         kmlAll([save_KML_IMG_as, ImgaDatas], IpDBs, SQlDbs)
+    else:
+        IMG_KML([save_KML_IMG_as, ImgaDatas]) 
     if(SAVE_JSON):
         with open(output_dir + '/'+ SAVE_JSON, 'wb') as fp:
             json.dump(hash_dic, fp)
