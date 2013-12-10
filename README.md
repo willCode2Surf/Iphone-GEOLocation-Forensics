@@ -1,5 +1,7 @@
-Iphone_GEOLocation_Forensics
+Iphone GEOLocation Forensics
 ============================
+https://github.com/AlexanderRyzhko/Iphone-GEOLocation-Forensics
+
 Script analyzing Iphone files looking for GeoLocations
 To run the script the following extra modials have to be installed:
   pygeoip - for ip geolocation lookup
