@@ -72,6 +72,11 @@ def makeOutputDir(out = output_dir):
             message = subprocess.check_output(["mkdir", out + '/'  + GEO_hit_files_folder ])
     except Exception, e:
         pass
+        if(HIT):
+            try:
+                message = subprocess.check_output(["mkdir", out + '/'  + GEO_hit_files_folder ])
+            except:
+                pass
 def kmlAll(imglist, Ips, SQls):
 
     if(MORE):
@@ -161,7 +166,9 @@ def kmlAll(imglist, Ips, SQls):
 
 def IP_info_By_IP(given_IP):
     '''returns IP info dictionary including location based on the IP adres, if failed returns None'''
+    global gi
     try:
+
         return gi.record_by_addr(given_IP)
     except Exception, e:
 
@@ -426,11 +433,12 @@ def sqlCrowle(fileName, dbName):
                         current_culum = all_culums[i]
                         #print "current_culum", current_culum
                         if(current_culum in IP_culums):
+                            #print "IP ADRESS?", row[i]
                             #print "IP detected:", row[i]
                             IP_info = IP_info_By_IP(row[i])
                             #print "IP_info:", IP_info
                             if(IP_info):
-                                #print "Valid IP"
+                                #print "Valid IP", row[i]
                                 IP_info["ip"] = row[i]
                                 add_IP_row += [[current_culum, IP_info]]
                         if(current_culum in list_valid_culums):
@@ -619,7 +627,7 @@ def printHelp(argv):
     print "  -z \t             -> save as KMZ instead of KML"
     print "  -a \t             -> save all in one kml/kmz file instead one per a database"
     print "  -m \t             -> print more information downing scipt run"
-    print "  -hit \t           -> save files with GEOlocation info"
+    print "  -hit \t             -> save files with GEOlocation info"
     print "  -st \t             -> sort files in folders based on the fie type"
     print "  -so \t             -> parse the files based on original names"
     print "  -rn \t             -> rename files with found original names"
@@ -627,7 +635,7 @@ def printHelp(argv):
     print "  -db dbName \t     -> database for IP geolocation, default = GeoLiteCity.dat"
     print "  -json fileName     -> add hash dictionary to load from a json file"
     print "  -s FileName \t     -> save hash dictionary created from manifest as json"
-    print 
+    print "  -d exDiscr \t     -> add additional discription for databases pull out"
     exit()
 def setup(argv):
     global hash_dic
@@ -674,19 +682,41 @@ def setup(argv):
         if("-rn" in argv):
             global RENAME
             RENAME = True
+            print "File Renaming"
         if("-o" in argv):
             global output_dir
-            output_dir = argstr.split(" -o ")[1].split()[0]
+            tmp = argstr.split(" -o ")[1].split()
+            if tmp:
+                output_dir = tmp[0]
+
         if("-db" in argv):
             global IPGeoDB
-            IPGeoDB = argstr.split(" -db ")[1].split()[0]
+            tmp = argstr.split(" -db ")[1].split()
+            if(tmp):
+                IPGeoDB = tmp[0]
+            #IPGeoDB = argstr.split(" -db ")[1].split()[0]
         if("-json" in argv):
-            hash_dic_name = argstr.split(" -json ")[1].split()[0]
+            tmp = argstr.split(" -json ")[1].split()
+            if(tmp):
+                hash_dic_name = tmp[0]
+        if("-d" in argv):
+            words = []
+            x = argstr.split(" -d ")[-1].split()
+            if(x):
+                x = x[0]
+            while(x):
+                words +=[x]
+                print "The following additional words:"
+                for word in words:
+                    print word,
+                x = raw_inpt("additional words or press ENTER:")
+            global wlist
+            wlist = wlist + words
         if("-s" in argv):
-            x = argstr.split(" -s ")[-1].split()[0]
+            x = argstr.split(" -s ")[-1].split()
             global SAVE_JSON
             if(x): 
-                SAVE_JSON = x
+                SAVE_JSON = x[0]
             else: 
                 SAVE_JSON = "Hash_dictionary_iphone_Files.json"
     try:
@@ -716,8 +746,6 @@ def setup(argv):
         
     return dir_name 
 
-
-
 def main(argv):
     IpDBs = [] 
     SQlDbs = []
@@ -725,6 +753,7 @@ def main(argv):
     dir_name = setup(argv)  
     try:
         print "Loading", IPGeoDB
+        global gi
         gi = pygeoip.GeoIP(IPGeoDB, pygeoip.MEMORY_CACHE)  
     except:
         print "ERROR: couln't load IP database"
@@ -739,7 +768,6 @@ def main(argv):
     #     typ = subprocess.check_output(["mkdir",output_dir])
     #     typ = subprocess.check_output(["mkdir",output_dir +'/' + GEO_IP_folder[:-1]])
     #     typ = subprocess.check_output(["mkdir",output_dir +'/' + GEO_found_folder[:-1]])
-
     # except:
     #     #print e
         # pass
@@ -760,7 +788,8 @@ def main(argv):
             try:
                 typ = subprocess.check_output(["file",ffn])
             except Exception, e:
-                print e
+                if(MORE):
+                    print e
                 continue
             #print typ
             typ = typ.split(":")[1]
@@ -784,7 +813,6 @@ def main(argv):
                     if(HIT):
                         try:
                             message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + new_fn.split("/")[-1]])
-
                         except:
                             pass
                 if(iplist):
@@ -811,7 +839,6 @@ def main(argv):
                             message = subprocess.check_output(["cp", ffn, output_dir+ '/'  +GEO_hit_files_folder+ '/' + new_fn.split("/")[-1]])
                         except:
                             pass
-
             #print "SORT_ORIGINAL", SORT_ORIGINAL
             if(SORT_ORIGINAL):
                 #print "try"
@@ -829,8 +856,7 @@ def main(argv):
                     #subprocess.check_output(["rm", ffn  ])
                 except Exception, e:
                     if(MORE):
-                        print e
-                    
+                        print e  
             elif(SORT_TYPE):
                 if (not( typ in types)):
                     types +=[typ]
@@ -839,14 +865,11 @@ def main(argv):
                     except:
                         pass
                 try:
-                    
                     subprocess.check_output(["mv",ffn, dirname + '/' + typ + '/' + new_fn.split('/')[-1]])
                     #subprocess.check_output(["rm", ffn  ])
                 except Exception, e:
                     if(MORE):
                         print e
-                    
-
             elif(RENAME):
                 #print "REEEEEEEEEEEEEEEEEEEEEENNNNNNNNNNNNNNNNNNNNNAAAAAAAAAAAME!"
                 try:
@@ -859,12 +882,9 @@ def main(argv):
     if(BIG_KML):
         print "Saving KML/KMZ"
         kmlAll([save_KML_IMG_as, ImgaDatas], IpDBs, SQlDbs)
-
     if(SAVE_JSON):
         with open(output_dir + '/'+ SAVE_JSON, 'wb') as fp:
             json.dump(hash_dic, fp)
-
     print "[Done]"
-
 if __name__ == '__main__':
     main(sys.argv)
